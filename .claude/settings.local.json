@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls \"/Users/vineelrayapati/Downloads/warehouse-3d-interactive-modified-B\"*)",
+      "Bash(npm create vite@latest . -- --template react)",
+      "Bash(npm install)",
+      "Bash(npm install recharts @supabase/supabase-js)",
+      "Bash(npm install three)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(npm install html2pdf.js jspdf html2canvas --save)"
+    ]
+  }
+}
