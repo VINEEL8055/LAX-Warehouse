@@ -636,34 +636,24 @@ export default function App() {
           </div>
         )}
 
-        {/* Row 3: Heatmap + Hot/Cold */}
-        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12,marginBottom:12}}>
-          <div style={card}>
-            <div style={lbl}>UTILIZATION HEATMAP</div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(13,1fr)",gap:3}}>
-              {data.map((s,i)=>{
-                const bg=s.util>90?C.red:s.util>70?C.orange:s.util>40?C.yellow:s.util>10?C.green:C.border;
-                return(<div key={i} title={`${s.name}: ${s.util}% (${s.occ}/${s.cap})`}
-                  style={{background:bg,opacity:Math.max(0.3,s.util/100),padding:"10px 3px",textAlign:"center",borderRadius:2}}>
-                  <div style={{fontSize:10,fontWeight:800,color:"#fff"}}>{s.name}</div>
-                  <div style={{fontSize:8,color:"rgba(255,255,255,0.7)"}}>{s.util}%</div>
-                </div>);
-              })}
-            </div>
-            <div style={{display:"flex",gap:14,marginTop:10,justifyContent:"center"}}>
-              {[{l:">90%",c:C.red},{l:"70-90%",c:C.orange},{l:"40-70%",c:C.yellow},{l:"<40%",c:C.green}].map((x,i)=>
-                <div key={i} style={{display:"flex",alignItems:"center",gap:4,fontSize:9,color:C.mid}}>
-                  <div style={{width:10,height:7,borderRadius:1,background:x.c}}/>{x.l}
-                </div>)}
-            </div>
+        {/* Row 3: Heatmap */}
+        <div style={{...card,marginBottom:12}}>
+          <div style={lbl}>UTILIZATION HEATMAP</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(13,1fr)",gap:3}}>
+            {data.map((s,i)=>{
+              const bg=s.util>90?C.red:s.util>70?C.orange:s.util>40?C.yellow:s.util>10?C.green:C.border;
+              return(<div key={i} title={`${s.name}: ${s.util}% (${s.occ}/${s.cap})`}
+                style={{background:bg,opacity:Math.max(0.3,s.util/100),padding:"10px 3px",textAlign:"center",borderRadius:2}}>
+                <div style={{fontSize:10,fontWeight:800,color:"#fff"}}>{s.name}</div>
+                <div style={{fontSize:8,color:"rgba(255,255,255,0.7)"}}>{s.util}%</div>
+              </div>);
+            })}
           </div>
-
-          <div style={card}>
-            <div style={lbl}>HOT & COLD SHELVES</div>
-            <div style={{fontSize:8,color:C.red,letterSpacing:2,fontFamily:"monospace",marginBottom:4}}>HIGHEST</div>
-            {hot.map((s,i)=><SBar key={i} s={s} c={s.util>90?C.red:C.orange}/>)}
-            <div style={{fontSize:8,color:C.green,letterSpacing:2,fontFamily:"monospace",marginTop:12,marginBottom:4}}>MOST AVAILABLE</div>
-            {cold.map((s,i)=><SBar key={i} s={s} c={C.green}/>)}
+          <div style={{display:"flex",gap:14,marginTop:10,justifyContent:"center"}}>
+            {[{l:">90%",c:C.red},{l:"70-90%",c:C.orange},{l:"40-70%",c:C.yellow},{l:"<40%",c:C.green}].map((x,i)=>
+              <div key={i} style={{display:"flex",alignItems:"center",gap:4,fontSize:9,color:C.mid}}>
+                <div style={{width:10,height:7,borderRadius:1,background:x.c}}/>{x.l}
+              </div>)}
           </div>
         </div>
 
