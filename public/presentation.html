@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Distrilogik LAX 3PL — Technical Presentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  :root {
+    --bg: #fef9f3; --card: #faf5ef; --border: #e8ddd0;
+    --accent: #6495ed; --accent-dim: rgba(100,149,237,0.12);
+    --orange: #ff8c00; --green: #7ccd7c; --red: #c41e3a;
+    --floor: #ff6b9d; --purple: #9370db; --yellow: #e6b800;
+    --text: #2a2a2a; --dim: #8b8b8b; --mid: #5c5c5c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #1a1a2e;
+    color: var(--text);
+    scroll-behavior: smooth;
+  }
+
+  /* ── SLIDE LAYOUT ── */
+  .slide {
+    width: 1280px;
+    min-height: 720px;
+    margin: 24px auto;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.5);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .slide-num {
+    position: absolute;
+    bottom: 20px; right: 28px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+  }
+
+  /* ── SLIDE THEMES ── */
+  .dark  { background: #0d1117; color: #e6edf3; }
+  .warm  { background: var(--bg); color: var(--text); }
+  .accent-bg { background: linear-gradient(135deg, #0d1b3e 0%, #1a2d5e 100%); color: #e6edf3; }
+  .green-bg  { background: linear-gradient(135deg, #0d2e1a 0%, #1a4a2a 100%); color: #e6edf3; }
+  .purple-bg { background: linear-gradient(135deg, #1a0d2e 0%, #2d1a4a 100%); color: #e6edf3; }
+
+  /* ── TYPOGRAPHY ── */
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 16px;
+  }
+  .tag-blue  { background: rgba(100,149,237,0.2); color: #6495ed; border: 1px solid rgba(100,149,237,0.3); }
+  .tag-green { background: rgba(124,205,124,0.2); color: #7ccd7c; border: 1px solid rgba(124,205,124,0.3); }
+  .tag-orange{ background: rgba(255,140,0,0.2);   color: #ff8c00; border: 1px solid rgba(255,140,0,0.3); }
+  .tag-purple{ background: rgba(147,112,219,0.2); color: #9370db; border: 1px solid rgba(147,112,219,0.3); }
+  .tag-floor { background: rgba(255,107,157,0.2); color: #ff6b9d; border: 1px solid rgba(255,107,157,0.3); }
+
+  h1 { font-size: 52px; font-weight: 900; line-height: 1.1; letter-spacing: -1px; }
+  h2 { font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px; }
+  h3 { font-size: 22px; font-weight: 700; line-height: 1.3; }
+  h4 { font-size: 14px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+  p  { font-size: 15px; line-height: 1.7; opacity: 0.85; }
+
+  mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* ── SLIDE 1: TITLE ── */
+  .title-slide {
+    background: linear-gradient(135deg, #0d1117 0%, #0d1b3e 50%, #0d2438 100%);
+    justify-content: center; align-items: flex-start; padding: 80px 100px;
+    min-height: 720px;
+  }
+  .title-slide .logo { font-family:'JetBrains Mono',monospace; font-size:13px; letter-spacing:6px; color:#6495ed; margin-bottom:24px; }
+  .title-slide h1 { color: #fff; font-size:62px; max-width:700px; }
+  .title-slide h1 span { color: #6495ed; }
+  .title-slide .subtitle { font-size:18px; color:rgba(255,255,255,0.5); margin-top:20px; font-weight:300; letter-spacing:1px; }
+  .title-slide .meta { display:flex; gap:32px; margin-top:60px; }
+  .title-slide .meta-item { }
+  .title-slide .meta-item .label { font-size:9px; letter-spacing:3px; color:rgba(255,255,255,0.35); text-transform:uppercase; font-family:'JetBrains Mono',monospace; }
+  .title-slide .meta-item .value { font-size:14px; color:rgba(255,255,255,0.75); margin-top:4px; font-weight:500; }
+  .title-slide .grid-lines {
+    position:absolute; inset:0; opacity:0.04;
+    background-image: linear-gradient(#6495ed 1px,transparent 1px),linear-gradient(90deg,#6495ed 1px,transparent 1px);
+    background-size:60px 60px;
+  }
+  .title-slide .accent-bar { width:5px; height:62px; background:#6495ed; margin-right:24px; border-radius:3px; display:inline-block; vertical-align:top; margin-top:8px; }
+
+  /* ── SLIDE HEADER ── */
+  .slide-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 28px 48px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+    padding-bottom: 20px;
+  }
+  .slide-header.warm-header { border-bottom: 1px solid var(--border); }
+  .slide-header .brand { font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:4px; color:#6495ed; }
+  .slide-header .slide-title { font-size:11px; letter-spacing:3px; text-transform:uppercase; opacity:0.4; font-family:'JetBrains Mono',monospace; }
+
+  /* ── SLIDE BODY ── */
+  .slide-body { flex:1; padding: 40px 48px 48px; }
+
+  /* ── GRID LAYOUTS ── */
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:24px; }
+  .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px; }
+  .grid-4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:16px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 24px;
+  }
+  .card.warm-card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:24px; }
+  .card-accent-left { border-left: 3px solid var(--accent) !important; }
+  .card-green-left  { border-left: 3px solid var(--green) !important; }
+  .card-orange-left { border-left: 3px solid var(--orange) !important; }
+  .card-red-left    { border-left: 3px solid var(--red) !important; }
+  .card-purple-left { border-left: 3px solid var(--purple) !important; }
+  .card-floor-left  { border-left: 3px solid var(--floor) !important; }
+
+  /* ── STAT BOXES ── */
+  .stat-box { text-align:center; }
+  .stat-box .stat-val { font-size:42px; font-weight:900; line-height:1; font-family:'JetBrains Mono',monospace; }
+  .stat-box .stat-lbl { font-size:10px; letter-spacing:2px; text-transform:uppercase; opacity:0.5; margin-top:8px; }
+
+  /* ── TABLE STYLES ── */
+  .db-table { width:100%; border-collapse:collapse; font-family:'JetBrains Mono',monospace; font-size:12px; }
+  .db-table th { padding:10px 14px; text-align:left; font-size:9px; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid rgba(100,149,237,0.3); color:#6495ed; font-weight:600; }
+  .db-table td { padding:9px 14px; border-bottom:1px solid rgba(255,255,255,0.06); vertical-align:top; line-height:1.5; }
+  .db-table tr:last-child td { border-bottom:none; }
+  .db-table tr:hover td { background:rgba(100,149,237,0.04); }
+
+  .db-table.warm-table th { border-bottom:2px solid rgba(100,149,237,0.2); color:var(--accent); }
+  .db-table.warm-table td { border-bottom:1px solid var(--border); color:var(--text); }
+  .db-table.warm-table tr:hover td { background:rgba(100,149,237,0.04); }
+
+  .badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:10px; font-weight:600; letter-spacing:0.5px; }
+  .badge-pk  { background:rgba(255,140,0,0.2); color:#ff8c00; border:1px solid rgba(255,140,0,0.3); }
+  .badge-fk  { background:rgba(100,149,237,0.2); color:#6495ed; border:1px solid rgba(100,149,237,0.3); }
+  .badge-req { background:rgba(196,30,58,0.2); color:#c41e3a; border:1px solid rgba(196,30,58,0.3); }
+  .badge-opt { background:rgba(124,205,124,0.2); color:#7ccd7c; border:1px solid rgba(124,205,124,0.3); }
+  .badge-auto{ background:rgba(147,112,219,0.2); color:#9370db; border:1px solid rgba(147,112,219,0.3); }
+  .badge-json{ background:rgba(255,107,157,0.2); color:#ff6b9d; border:1px solid rgba(255,107,157,0.3); }
+
+  /* ── TECH STACK PILLS ── */
+  .tech-pill {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);
+    border-radius:8px; padding:10px 16px; font-size:13px; font-weight:500;
+  }
+  .tech-pill .dot { width:8px; height:8px; border-radius:50%; }
+
+  /* ── FLOW DIAGRAM ── */
+  .flow { display:flex; align-items:center; gap:0; flex-wrap:wrap; }
+  .flow-box {
+    background:rgba(100,149,237,0.12); border:1px solid rgba(100,149,237,0.3);
+    border-radius:8px; padding:12px 20px; font-size:12px; font-weight:600;
+    font-family:'JetBrains Mono',monospace; color:#6495ed; text-align:center;
+    min-width:120px;
+  }
+  .flow-arrow { font-size:20px; color:rgba(255,255,255,0.25); margin:0 8px; }
+
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background:#0d1117; border:1px solid rgba(100,149,237,0.2); border-radius:8px;
+    padding:20px 24px; font-family:'JetBrains Mono',monospace; font-size:12px;
+    line-height:1.8; color:#e6edf3; overflow:hidden;
+  }
+  .code-block .kw  { color:#ff7b72; }
+  .code-block .str { color:#a5d6ff; }
+  .code-block .cmt { color:#8b949e; }
+  .code-block .fn  { color:#d2a8ff; }
+  .code-block .num { color:#79c0ff; }
+  .code-block .type{ color:#7ccd7c; }
+
+  /* ── RLS POLICY CARD ── */
+  .policy-item { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .policy-item:last-child { border-bottom:none; }
+  .policy-icon { width:32px; height:32px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch-layer {
+    background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+    border-radius:10px; padding:16px 20px; display:flex; align-items:center; gap:16px;
+    margin-bottom:10px;
+  }
+  .arch-layer .layer-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; opacity:0.4; font-family:'JetBrains Mono',monospace; min-width:80px; }
+  .arch-layer .layer-items { display:flex; gap:10px; flex-wrap:wrap; }
+  .arch-layer .item { background:rgba(100,149,237,0.1); border:1px solid rgba(100,149,237,0.25); border-radius:6px; padding:6px 14px; font-size:12px; font-weight:600; color:#6495ed; }
+  .arch-layer .item.green { background:rgba(124,205,124,0.1); border-color:rgba(124,205,124,0.25); color:#7ccd7c; }
+  .arch-layer .item.orange{ background:rgba(255,140,0,0.1); border-color:rgba(255,140,0,0.25); color:#ff8c00; }
+  .arch-layer .item.purple{ background:rgba(147,112,219,0.1); border-color:rgba(147,112,219,0.25); color:#9370db; }
+
+  /* ── FEATURE LIST ── */
+  .feature-list { list-style:none; }
+  .feature-list li { display:flex; align-items:flex-start; gap:12px; padding:8px 0; font-size:14px; line-height:1.5; }
+  .feature-list li .icon { color:#6495ed; font-weight:700; margin-top:1px; flex-shrink:0; }
+
+  /* ── PRINT / SLIDE NAV ── */
+  .nav { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:100; display:flex; gap:8px; background:rgba(0,0,0,0.8); padding:10px 16px; border-radius:40px; backdrop-filter:blur(10px); }
+  .nav a { width:8px; height:8px; background:rgba(255,255,255,0.25); border-radius:50%; display:block; transition:all 0.2s; }
+  .nav a:hover { background:#6495ed; }
+
+  @media print {
+    body { background:#fff; }
+    .slide { margin:0; border-radius:0; box-shadow:none; width:100%; page-break-after:always; }
+    .nav { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 1 — TITLE
+════════════════════════════════════════════════ -->
+<div class="slide title-slide" id="s1">
+  <div class="grid-lines"></div>
+  <div class="logo">DISTRILOGIK · TECHNICAL OVERVIEW</div>
+  <div style="display:flex;align-items:flex-start">
+    <div class="accent-bar"></div>
+    <h1>LAX 3PL Warehouse<br/><span>Management System</span></h1>
+  </div>
+  <p class="subtitle">Full-stack warehouse operations platform — built for real-time tracking,<br/>floor-level account visibility, and historical analytics</p>
+  <div class="meta">
+    <div class="meta-item">
+      <div class="label">Version</div>
+      <div class="value">1.0.0 — Production</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Stack</div>
+      <div class="value">React 19 · Supabase · Recharts · Three.js</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Deployment</div>
+      <div class="value">Vercel · GitHub CI</div>
+    </div>
+    <div class="meta-item">
+      <div class="label">Auth</div>
+      <div class="value">Supabase Auth (Email / Password)</div>
+    </div>
+  </div>
+  <div class="slide-num">01 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 2 — SYSTEM OVERVIEW
+════════════════════════════════════════════════ -->
+<div class="slide dark" id="s2">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">System Overview</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-blue" style="margin-bottom:8px">What We Built</div>
+    <h2 style="color:#fff;margin-bottom:28px">A complete warehouse ops platform<br/>from data entry to analytics</h2>
+
+    <div class="grid-3" style="margin-bottom:28px">
+      <div class="card card-accent-left">
+        <div style="font-size:28px;margin-bottom:12px">📥</div>
+        <h4 style="color:#6495ed;margin-bottom:8px">Data Entry</h4>
+        <p style="font-size:13px;opacity:0.7">Weekly shelf empty counts per section (Front · Bridge · Back). Floor pallets tracked per individual account.</p>
+      </div>
+      <div class="card card-green-left">
+        <div style="font-size:28px;margin-bottom:12px">📊</div>
+        <h4 style="color:#7ccd7c;margin-bottom:8px">Analytics</h4>
+        <p style="font-size:13px;opacity:0.7">Live utilization metrics, occupancy charts, shelf heatmaps, floor vs shelf breakdowns — all real-time.</p>
+      </div>
+      <div class="card card-orange-left">
+        <div style="font-size:28px;margin-bottom:12px">📈</div>
+        <h4 style="color:#ff8c00;margin-bottom:8px">History & Trends</h4>
+        <p style="font-size:13px;opacity:0.7">Weekly trend charts, historical record lookup, WoW (Week-over-Week) delta comparisons.</p>
+      </div>
+    </div>
+
+    <div class="grid-4">
+      <div class="stat-box">
+        <div class="stat-val" style="color:#6495ed">26</div>
+        <div class="stat-lbl">Shelves Tracked</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:#ff8c00">11,748</div>
+        <div class="stat-lbl">Total Capacity</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:#7ccd7c">5</div>
+        <div class="stat-lbl">App Pages</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color:#ff6b9d">6+</div>
+        <div class="stat-lbl">Floor Accounts</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">02 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 3 — TECH STACK
+════════════════════════════════════════════════ -->
+<div class="slide accent-bg" id="s3">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Technology Stack</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-blue">Built With</div>
+    <h2 style="color:#fff;margin-bottom:32px">Modern, production-grade stack</h2>
+
+    <div class="arch-layer">
+      <div class="layer-label">Frontend</div>
+      <div class="layer-items">
+        <div class="item">React 19</div>
+        <div class="item">Vite 6</div>
+        <div class="item orange">Recharts 3</div>
+        <div class="item purple">Three.js</div>
+        <div class="item">Inline Styles (Theme Object)</div>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="layer-label">Auth</div>
+      <div class="layer-items">
+        <div class="item green">Supabase Auth</div>
+        <div class="item">Email + Password</div>
+        <div class="item">Session Persistence (localStorage)</div>
+        <div class="item">onAuthStateChange listener</div>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="layer-label">Database</div>
+      <div class="layer-items">
+        <div class="item orange">Supabase PostgreSQL</div>
+        <div class="item green">Row Level Security</div>
+        <div class="item">JSONB columns</div>
+        <div class="item">Upsert on conflict</div>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="layer-label">DevOps</div>
+      <div class="layer-items">
+        <div class="item green">GitHub (VINEEL8055/LAX-Warehouse)</div>
+        <div class="item orange">Vercel (Deploy-ready)</div>
+        <div class="item">.env.local (secrets)</div>
+      </div>
+    </div>
+
+    <div class="arch-layer">
+      <div class="layer-label">State</div>
+      <div class="layer-items">
+        <div class="item">useState · useEffect · useMemo</div>
+        <div class="item">No Redux / No Router</div>
+        <div class="item">Conditional render by page state</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">03 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 4 — APPLICATION PAGES
+════════════════════════════════════════════════ -->
+<div class="slide dark" id="s4">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Application Pages</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-purple">App Structure</div>
+    <h2 style="color:#fff;margin-bottom:28px">5 pages, zero external router</h2>
+
+    <div class="grid-2" style="gap:16px">
+      <div class="card card-accent-left">
+        <h4 style="color:#6495ed;margin-bottom:10px">📥 INPUT</h4>
+        <ul class="feature-list">
+          <li><span class="icon">→</span>Select record date</li>
+          <li><span class="icon">→</span>Enter shelf empties in F-B-K format (e.g. 46-3-25)</li>
+          <li><span class="icon">→</span>Floor pallets per account (dynamic, named)</li>
+          <li><span class="icon">→</span>PREVIEW before saving · SAVE WEEK to persist</li>
+        </ul>
+      </div>
+      <div class="card card-green-left">
+        <h4 style="color:#7ccd7c;margin-bottom:10px">📊 ANALYTICS</h4>
+        <ul class="feature-list">
+          <li><span class="icon">→</span>6 KPI cards (capacity, utilization, floor %)</li>
+          <li><span class="icon">→</span>Pie charts: shelf vs floor, occupancy</li>
+          <li><span class="icon">→</span>Bar chart: SD vs DD rack types</li>
+          <li><span class="icon">→</span>Floor pallets by account chart</li>
+          <li><span class="icon">→</span>Utilization heatmap · Shelf registry table</li>
+        </ul>
+      </div>
+      <div class="card card-orange-left">
+        <h4 style="color:#ff8c00;margin-bottom:10px">📈 WEEKLY TRENDS</h4>
+        <ul class="feature-list">
+          <li><span class="icon">→</span>Multi-line composed chart (shelf + floor + util%)</li>
+          <li><span class="icon">→</span>Floor pallets weekly area chart</li>
+          <li><span class="icon">→</span>Shelf vs floor ratio stacked area chart</li>
+          <li><span class="icon">→</span>Snapshots log table</li>
+        </ul>
+      </div>
+      <div class="card card-purple-left">
+        <h4 style="color:#9370db;margin-bottom:10px">🕒 REPORT HISTORY · 🧊 3D MAP</h4>
+        <ul class="feature-list">
+          <li><span class="icon">→</span>Select any saved date to view full shelf breakdown</li>
+          <li><span class="icon">→</span>Historical analytics with floor account details</li>
+          <li><span class="icon">→</span>3D warehouse visualization (Three.js)</li>
+          <li><span class="icon">→</span>Color-coded shelf occupancy in 3D space</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">04 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 5 — DATABASE: OVERVIEW
+════════════════════════════════════════════════ -->
+<div class="slide accent-bg" id="s5">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Database Architecture</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-green">Supabase PostgreSQL</div>
+    <h2 style="color:#fff;margin-bottom:10px">2 core tables · RLS protected · JSONB support</h2>
+    <p style="color:rgba(255,255,255,0.5);margin-bottom:32px;font-size:14px">All data is scoped to authenticated users only via Row Level Security policies</p>
+
+    <div class="grid-2" style="gap:24px;margin-bottom:24px">
+      <div class="card" style="border-color:rgba(255,140,0,0.3);background:rgba(255,140,0,0.06)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="width:40px;height:40px;background:rgba(255,140,0,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📋</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#ff8c00">weekly_snapshots</div>
+            <div style="font-size:11px;opacity:0.5;letter-spacing:1px">1 row per saved date</div>
+          </div>
+        </div>
+        <p style="font-size:13px;opacity:0.7;line-height:1.6">Stores the <strong style="color:#fff">aggregate summary</strong> for each saved week — total capacity, occupancy, utilization %, floor pallets, shelf type breakdown, and per-account floor data as JSONB.</p>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge badge-pk">PK: week_label</span>
+          <span class="badge badge-json">JSONB: floor_accounts</span>
+          <span class="badge badge-auto">auto: timestamps</span>
+        </div>
+      </div>
+
+      <div class="card" style="border-color:rgba(100,149,237,0.3);background:rgba(100,149,237,0.06)">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div style="width:40px;height:40px;background:rgba(100,149,237,0.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px">📦</div>
+          <div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#6495ed">weekly_records</div>
+            <div style="font-size:11px;opacity:0.5;letter-spacing:1px">1 row per shelf per saved date</div>
+          </div>
+        </div>
+        <p style="font-size:13px;opacity:0.7;line-height:1.6">Stores <strong style="color:#fff">shelf-level detail</strong> — each of the 26 shelves gets its own row with front/bridge/back empties, occupied count, free count, and utilization %.</p>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge badge-pk">PK: id (serial)</span>
+          <span class="badge badge-fk">FK: week_label</span>
+          <span class="badge badge-req">UNIQUE: week+shelf</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="background:rgba(124,205,124,0.06);border-color:rgba(124,205,124,0.2)">
+      <div style="display:flex;align-items:center;gap:32px">
+        <div style="text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#7ccd7c">8</div>
+          <div style="font-size:9px;letter-spacing:2px;opacity:0.5;text-transform:uppercase">RLS Policies</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#ff8c00">2</div>
+          <div style="font-size:9px;letter-spacing:2px;opacity:0.5;text-transform:uppercase">Indexes</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:800;color:#6495ed">1</div>
+          <div style="font-size:9px;letter-spacing:2px;opacity:0.5;text-transform:uppercase">Unique Constraint</div>
+        </div>
+        <div style="flex:1;font-size:13px;opacity:0.6;line-height:1.6">
+          All operations (SELECT, INSERT, UPDATE, DELETE) require an active authenticated session. Anonymous access is completely blocked by RLS.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">05 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 6 — TABLE: weekly_snapshots
+════════════════════════════════════════════════ -->
+<div class="slide warm" id="s6">
+  <div class="slide-header warm-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title" style="color:var(--dim)">Table Schema</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-orange">weekly_snapshots</div>
+    <h3 style="margin-bottom:6px">Aggregate summary — one row per saved date</h3>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:20px">Primary key: <mono>week_label</mono> · Upsert on conflict (safe to re-save same date)</p>
+
+    <table class="db-table warm-table">
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+          <th>Constraint</th>
+          <th>Description</th>
+          <th>Example Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>week_label</strong></td><td>TEXT</td><td><span class="badge badge-pk">PRIMARY KEY</span></td><td>Human-readable date identifier</td><td><mono style="font-size:11px">2026-03-11 (Tue)</mono></td></tr>
+        <tr><td>total_capacity</td><td>INTEGER</td><td><span class="badge badge-req">NOT NULL</span></td><td>Sum of all 26 shelf capacities</td><td><mono>11748</mono></td></tr>
+        <tr><td>total_occupied</td><td>INTEGER</td><td><span class="badge badge-req">NOT NULL</span></td><td>Pallets currently on shelf</td><td><mono>9823</mono></td></tr>
+        <tr><td>total_free</td><td>INTEGER</td><td><span class="badge badge-req">NOT NULL</span></td><td>Empty slots across all shelves</td><td><mono>1925</mono></td></tr>
+        <tr><td>utilization_pct</td><td>NUMERIC(5,1)</td><td><span class="badge badge-req">NOT NULL</span></td><td>Percentage of capacity in use</td><td><mono>83.6</mono></td></tr>
+        <tr><td>sd_occupied</td><td>INTEGER</td><td>DEFAULT 0</td><td>Single Deep rack occupancy</td><td><mono>4120</mono></td></tr>
+        <tr><td>dd_occupied</td><td>INTEGER</td><td>DEFAULT 0</td><td>Double Deep rack occupancy</td><td><mono>5703</mono></td></tr>
+        <tr><td>sd_free</td><td>INTEGER</td><td>DEFAULT 0</td><td>Single Deep free slots</td><td><mono>820</mono></td></tr>
+        <tr><td>dd_free</td><td>INTEGER</td><td>DEFAULT 0</td><td>Double Deep free slots</td><td><mono>1105</mono></td></tr>
+        <tr><td>floor_pallets</td><td>INTEGER</td><td>DEFAULT 0</td><td>Total pallets stored on warehouse floor</td><td><mono>135</mono></td></tr>
+        <tr><td>on_shelf_total</td><td>INTEGER</td><td>DEFAULT 0</td><td>Alias for total_occupied (chart compat.)</td><td><mono>9823</mono></td></tr>
+        <tr><td>critical_shelves</td><td>INTEGER</td><td>DEFAULT 0</td><td>Shelves over 90% utilized</td><td><mono>3</mono></td></tr>
+        <tr><td>high_shelves</td><td>INTEGER</td><td>DEFAULT 0</td><td>Shelves 70–90% utilized</td><td><mono>8</mono></td></tr>
+        <tr><td>optimal_shelves</td><td>INTEGER</td><td>DEFAULT 0</td><td>Shelves 40–70% utilized</td><td><mono>12</mono></td></tr>
+        <tr><td>low_shelves</td><td>INTEGER</td><td>DEFAULT 0</td><td>Shelves under 40% utilized</td><td><mono>3</mono></td></tr>
+        <tr><td><strong>floor_accounts</strong></td><td>JSONB</td><td><span class="badge badge-json">JSONB</span> DEFAULT []</td><td>Array of per-account floor pallet entries</td><td><mono style="font-size:10px">[{"name":"Amazon","value":"45"}]</mono></td></tr>
+        <tr><td>created_at</td><td>TIMESTAMPTZ</td><td><span class="badge badge-auto">AUTO</span></td><td>Row creation timestamp</td><td><mono style="font-size:11px">2026-03-11T06:14:00Z</mono></td></tr>
+        <tr><td>updated_at</td><td>TIMESTAMPTZ</td><td><span class="badge badge-auto">AUTO</span></td><td>Last update timestamp</td><td><mono style="font-size:11px">2026-03-11T06:14:00Z</mono></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="slide-num">06 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 7 — TABLE: weekly_records
+════════════════════════════════════════════════ -->
+<div class="slide warm" id="s7">
+  <div class="slide-header warm-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title" style="color:var(--dim)">Table Schema</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-blue">weekly_records</div>
+    <h3 style="margin-bottom:6px">Shelf-level detail — up to 26 rows per saved date</h3>
+    <p style="font-size:12px;color:var(--dim);margin-bottom:20px">Foreign key → <mono>weekly_snapshots.week_label</mono> · Unique constraint on <mono>(week_label, shelf_id)</mono> prevents duplicates</p>
+
+    <table class="db-table warm-table" style="margin-bottom:20px">
+      <thead>
+        <tr>
+          <th>Column</th>
+          <th>Type</th>
+          <th>Constraint</th>
+          <th>Description</th>
+          <th>Example Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>id</strong></td><td>SERIAL</td><td><span class="badge badge-pk">PRIMARY KEY</span></td><td>Auto-incrementing row ID</td><td><mono>1</mono></td></tr>
+        <tr><td><strong>week_label</strong></td><td>TEXT</td><td><span class="badge badge-fk">FK → snapshots</span> NOT NULL</td><td>Links to weekly_snapshots row</td><td><mono style="font-size:11px">2026-03-11 (Tue)</mono></td></tr>
+        <tr><td>shelf_id</td><td>INTEGER</td><td><span class="badge badge-req">NOT NULL</span></td><td>Shelf number 1–26 (S01–S26)</td><td><mono>3</mono></td></tr>
+        <tr><td>front_empties</td><td>INTEGER</td><td>DEFAULT 0</td><td>Empty slots in Front section (F)</td><td><mono>46</mono></td></tr>
+        <tr><td>bridge_empties</td><td>INTEGER</td><td>DEFAULT 0</td><td>Empty slots in Bridge section (B)</td><td><mono>3</mono></td></tr>
+        <tr><td>back_empties</td><td>INTEGER</td><td>DEFAULT 0</td><td>Empty slots in Back section (K)</td><td><mono>25</mono></td></tr>
+        <tr><td>occupied</td><td>INTEGER</td><td>DEFAULT 0</td><td>Pallets on this shelf (cap − empties)</td><td><mono>268</mono></td></tr>
+        <tr><td>free</td><td>INTEGER</td><td>DEFAULT 0</td><td>Total empty slots (F+B+K)</td><td><mono>74</mono></td></tr>
+        <tr><td>utilization_pct</td><td>NUMERIC(5,1)</td><td>DEFAULT 0</td><td>Occupancy % for this shelf</td><td><mono>78.4</mono></td></tr>
+        <tr><td>created_at</td><td>TIMESTAMPTZ</td><td><span class="badge badge-auto">AUTO</span></td><td>Row creation timestamp</td><td><mono style="font-size:11px">2026-03-11T06:14:00Z</mono></td></tr>
+      </tbody>
+    </table>
+
+    <div class="grid-2" style="gap:16px">
+      <div class="card warm-card" style="padding:16px">
+        <h4 style="color:var(--accent);margin-bottom:8px;font-size:11px">INDEXES</h4>
+        <div class="code-block" style="font-size:11px;padding:12px 16px;line-height:1.9">
+          <span class="cmt">-- Fast lookup by date</span><br/>
+          <span class="kw">CREATE INDEX</span> idx_weekly_records_week<br/>
+          &nbsp;&nbsp;<span class="kw">ON</span> weekly_records(week_label);<br/><br/>
+          <span class="cmt">-- Prevents duplicate shelf per week</span><br/>
+          <span class="kw">CREATE UNIQUE INDEX</span> idx_weekly_records_week_shelf<br/>
+          &nbsp;&nbsp;<span class="kw">ON</span> weekly_records(week_label, shelf_id);
+        </div>
+      </div>
+      <div class="card warm-card" style="padding:16px">
+        <h4 style="color:var(--green);margin-bottom:8px;font-size:11px">ON DELETE CASCADE</h4>
+        <p style="font-size:12px;color:var(--mid);line-height:1.7">If a snapshot row is deleted, all its associated shelf records are automatically removed. This keeps the database clean with no orphaned rows.</p>
+        <div style="margin-top:10px;font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace">weekly_snapshots → weekly_records<br/>1 snapshot = up to 26 shelf records</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">07 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 8 — RLS + AUTH
+════════════════════════════════════════════════ -->
+<div class="slide green-bg" id="s8">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Security Model</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-green">Auth + RLS</div>
+    <h2 style="color:#fff;margin-bottom:8px">Zero-trust database access</h2>
+    <p style="color:rgba(255,255,255,0.5);margin-bottom:28px;font-size:14px">Every database operation is validated server-side. The anon key is intentionally public — RLS enforces all access rules.</p>
+
+    <div class="grid-2" style="gap:20px">
+      <div class="card">
+        <h4 style="color:#7ccd7c;margin-bottom:16px">Authentication Flow</h4>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="flow-box" style="min-width:90px;font-size:11px">App Load</div>
+            <div class="flow-arrow">→</div>
+            <div style="font-size:12px;opacity:0.7">getSession() checks localStorage</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="flow-box" style="min-width:90px;font-size:11px;background:rgba(196,30,58,0.15);border-color:rgba(196,30,58,0.3);color:#c41e3a">No session</div>
+            <div class="flow-arrow">→</div>
+            <div style="font-size:12px;opacity:0.7">Show login gate (nothing accessible)</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="flow-box" style="min-width:90px;font-size:11px">Sign In</div>
+            <div class="flow-arrow">→</div>
+            <div style="font-size:12px;opacity:0.7">Supabase returns JWT token</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="flow-box" style="min-width:90px;font-size:11px;background:rgba(124,205,124,0.15);border-color:rgba(124,205,124,0.3);color:#7ccd7c">Session active</div>
+            <div class="flow-arrow">→</div>
+            <div style="font-size:12px;opacity:0.7">Full app unlocked, data loads</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="flow-box" style="min-width:90px;font-size:11px">Refresh</div>
+            <div class="flow-arrow">→</div>
+            <div style="font-size:12px;opacity:0.7">Session persists (no re-login needed)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h4 style="color:#7ccd7c;margin-bottom:16px">Row Level Security Policies</h4>
+        <div class="policy-item">
+          <div class="policy-icon" style="background:rgba(100,149,237,0.2)">👁️</div>
+          <div><div style="font-size:12px;font-weight:600">SELECT (Read)</div><div style="font-size:11px;opacity:0.6;margin-top:2px">authenticated role · USING (true)</div></div>
+        </div>
+        <div class="policy-item">
+          <div class="policy-icon" style="background:rgba(124,205,124,0.2)">➕</div>
+          <div><div style="font-size:12px;font-weight:600">INSERT (Create)</div><div style="font-size:11px;opacity:0.6;margin-top:2px">authenticated role · WITH CHECK (true)</div></div>
+        </div>
+        <div class="policy-item">
+          <div class="policy-icon" style="background:rgba(255,140,0,0.2)">✏️</div>
+          <div><div style="font-size:12px;font-weight:600">UPDATE (Modify)</div><div style="font-size:11px;opacity:0.6;margin-top:2px">authenticated role · USING + WITH CHECK</div></div>
+        </div>
+        <div class="policy-item">
+          <div class="policy-icon" style="background:rgba(196,30,58,0.2)">🗑️</div>
+          <div><div style="font-size:12px;font-weight:600">DELETE (Remove)</div><div style="font-size:11px;opacity:0.6;margin-top:2px">authenticated role · USING (true)</div></div>
+        </div>
+        <div style="margin-top:14px;padding:10px 14px;background:rgba(124,205,124,0.08);border:1px solid rgba(124,205,124,0.2);border-radius:6px;font-size:11px;opacity:0.8">
+          ✅ Applied to <strong>both tables</strong> — 4 policies × 2 tables = 8 total
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">08 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 9 — DATA FLOW
+════════════════════════════════════════════════ -->
+<div class="slide dark" id="s9">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Data Flow</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-orange">Save → Query → Display</div>
+    <h2 style="color:#fff;margin-bottom:28px">How data moves through the system</h2>
+
+    <div class="grid-2" style="gap:20px">
+      <div>
+        <h4 style="color:#ff8c00;margin-bottom:14px;font-size:11px">SAVE WEEK FLOW</h4>
+        <div class="code-block" style="font-size:11.5px">
+          <span class="cmt">// 1. User enters shelf empties + floor accounts</span><br/>
+          inputs[shelf_id] = <span class="str">"46-3-25"</span> <span class="cmt">// F-B-K</span><br/>
+          floorAccounts = [{name:<span class="str">"Amazon"</span>, value:<span class="str">"45"</span>}]<br/><br/>
+          <span class="cmt">// 2. apply() calculates occupancy</span><br/>
+          occ = cap − (fE + bE + kE)<br/>
+          util = (occ / cap) × <span class="num">100</span><br/><br/>
+          <span class="cmt">// 3. Upsert aggregate snapshot</span><br/>
+          <span class="fn">supabase</span>.from(<span class="str">"weekly_snapshots"</span>)<br/>
+          &nbsp;&nbsp;.upsert(snap, {onConflict: <span class="str">"week_label"</span>})<br/><br/>
+          <span class="cmt">// 4. Insert shelf-level records</span><br/>
+          <span class="fn">supabase</span>.from(<span class="str">"weekly_records"</span>)<br/>
+          &nbsp;&nbsp;.insert(recs) <span class="cmt">// up to 26 rows</span>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="color:#6495ed;margin-bottom:14px;font-size:11px">QUERY FLOW (HISTORICAL)</h4>
+        <div class="code-block" style="font-size:11.5px">
+          <span class="cmt">// Load all saved snapshots (trends page)</span><br/>
+          <span class="fn">supabase</span>.from(<span class="str">"weekly_snapshots"</span>)<br/>
+          &nbsp;&nbsp;.select(<span class="str">"*"</span>)<br/>
+          &nbsp;&nbsp;.order(<span class="str">"week_label"</span>, {ascending: <span class="kw">true</span>})<br/>
+          &nbsp;&nbsp;.limit(<span class="num">52</span>)<br/><br/>
+          <span class="cmt">// Load one snapshot for analytics</span><br/>
+          <span class="fn">supabase</span>.from(<span class="str">"weekly_snapshots"</span>)<br/>
+          &nbsp;&nbsp;.select(<span class="str">"*"</span>)<br/>
+          &nbsp;&nbsp;.eq(<span class="str">"week_label"</span>, weekLabel)<br/>
+          &nbsp;&nbsp;.single()<br/><br/>
+          <span class="cmt">// Load shelf records for report history</span><br/>
+          <span class="fn">supabase</span>.from(<span class="str">"weekly_records"</span>)<br/>
+          &nbsp;&nbsp;.select(<span class="str">"*"</span>)<br/>
+          &nbsp;&nbsp;.eq(<span class="str">"week_label"</span>, weekLabel)<br/>
+          &nbsp;&nbsp;.order(<span class="str">"shelf_id"</span>, {ascending: <span class="kw">true</span>})
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">09 / 10</div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 10 — DEPLOYMENT + NEXT STEPS
+════════════════════════════════════════════════ -->
+<div class="slide purple-bg" id="s10">
+  <div class="slide-header">
+    <div class="brand">DISTRILOGIK</div>
+    <div class="slide-title">Deployment & Roadmap</div>
+  </div>
+  <div class="slide-body">
+    <div class="tag tag-purple">Where We Are</div>
+    <h2 style="color:#fff;margin-bottom:28px">Production-ready · Deploy in minutes</h2>
+
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <h4 style="color:#9370db;margin-bottom:16px;font-size:11px">DEPLOYMENT CHECKLIST</h4>
+        <div class="card" style="padding:16px">
+          <ul class="feature-list">
+            <li><span class="icon" style="color:#7ccd7c">✅</span>Supabase project live (phrzbqzrlrykcpycajhp)</li>
+            <li><span class="icon" style="color:#7ccd7c">✅</span>Database tables created + RLS enabled</li>
+            <li><span class="icon" style="color:#7ccd7c">✅</span>Authentication configured (email/password)</li>
+            <li><span class="icon" style="color:#7ccd7c">✅</span>Code pushed to GitHub (VINEEL8055/LAX-Warehouse)</li>
+            <li><span class="icon" style="color:#7ccd7c">✅</span>Environment variables configured (.env.local)</li>
+            <li><span class="icon" style="color:#ff8c00">⏳</span>Connect GitHub repo to Vercel</li>
+            <li><span class="icon" style="color:#ff8c00">⏳</span>Add VITE_SUPABASE_URL + VITE_SUPABASE_KEY in Vercel</li>
+            <li><span class="icon" style="color:#ff8c00">⏳</span>Deploy → get live URL</li>
+          </ul>
+        </div>
+      </div>
+
+      <div>
+        <h4 style="color:#9370db;margin-bottom:16px;font-size:11px">ENVIRONMENT VARIABLES NEEDED</h4>
+        <div class="code-block" style="margin-bottom:16px;font-size:12px">
+          <span class="kw">VITE_SUPABASE_URL</span>=<br/>
+          <span class="str">https://phrzbqzrlrykcpycajhp.supabase.co</span><br/><br/>
+          <span class="kw">VITE_SUPABASE_KEY</span>=<br/>
+          <span class="str">eyJhbGciOiJIUzI1NiIsInR5cCI6Ikp...</span>
+        </div>
+        <h4 style="color:#9370db;margin-bottom:12px;font-size:11px">POSSIBLE ENHANCEMENTS</h4>
+        <div class="card" style="padding:14px">
+          <ul class="feature-list" style="font-size:12px">
+            <li><span class="icon">→</span>Multi-user roles (admin / viewer)</li>
+            <li><span class="icon">→</span>Email weekly summary reports</li>
+            <li><span class="icon">→</span>Mobile responsive layout</li>
+            <li><span class="icon">→</span>CSV export of any report</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;padding:16px 24px;background:rgba(147,112,219,0.1);border:1px solid rgba(147,112,219,0.25);border-radius:10px;display:flex;align-items:center;gap:20px">
+      <div style="font-size:28px">🔗</div>
+      <div>
+        <div style="font-size:11px;letter-spacing:2px;opacity:0.5;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:4px">Repository</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#9370db">github.com/VINEEL8055/LAX-Warehouse</div>
+      </div>
+      <div style="margin-left:40px">
+        <div style="font-size:11px;letter-spacing:2px;opacity:0.5;text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:4px">Database</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:14px;color:#7ccd7c">Supabase · phrzbqzrlrykcpycajhp</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">10 / 10</div>
+</div>
+
+<!-- NAV DOTS -->
+<div class="nav">
+  <a href="#s1" title="Title"></a>
+  <a href="#s2" title="Overview"></a>
+  <a href="#s3" title="Tech Stack"></a>
+  <a href="#s4" title="Pages"></a>
+  <a href="#s5" title="DB Overview"></a>
+  <a href="#s6" title="weekly_snapshots"></a>
+  <a href="#s7" title="weekly_records"></a>
+  <a href="#s8" title="Security"></a>
+  <a href="#s9" title="Data Flow"></a>
+  <a href="#s10" title="Deployment"></a>
+</div>
+
+</body>
+</html>
