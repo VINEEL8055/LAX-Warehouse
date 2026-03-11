@@ -64,9 +64,11 @@ const C = {
   yellow:"#ffd700",yellowDim:"rgba(255,215,0,0.12)",
   red:"#c41e3a",redDim:"rgba(196,30,58,0.12)",
   floor:"#ff6b9d",floorDim:"rgba(255,107,157,0.12)",
-  purple:"#9370db",
+  purple:"#9370db",cyan:"#20b2aa",
   text:"#3a3a3a",dim:"#8b8b8b",mid:"#5c5c5c",grid:"#ddd5ca",
 };
+
+const ACCT_COLORS = ["#ff6b9d","#6495ed","#ff8c00","#7ccd7c","#9370db","#20b2aa"];
 
 // ═══════════════════════════════════════════════════
 //  HELPERS
@@ -96,8 +98,10 @@ export default function App() {
   const [page, setPage] = useState("input");
   const [recordDate, setRecordDate] = useState(new Date().toISOString().split('T')[0]);
   const [inputs, setInputs] = useState(()=>{const o={};SHELVES.forEach(s=>{o[s.id]=""});return o;});
-  const [floorInput, setFloorInput] = useState("");
-  const [floorPallets, setFloorPallets] = useState(0);
+  const [floorAccounts, setFloorAccounts] = useState([
+    {name:"",value:""},
+  ]);
+  const floorPallets = floorAccounts.reduce((sum,a)=>sum+(parseInt(a.value)||0),0);
   const [data, setData] = useState(()=>SHELVES.map(s=>({...s,fE:0,bE:0,kE:0,occ:s.cap,free:0,util:100})));
   const [snaps, setSnaps] = useState([]);
   const [log, setLog] = useState([]);
@@ -181,8 +185,7 @@ export default function App() {
   }
 
   function apply() {
-    const fp = parseInt(floorInput)||0;
-    setFloorPallets(fp);
+    const fp = floorPallets;
     const nd = SHELVES.map(s=>{
       const inp=inputs[s.id]?.trim();
       let fE=0,bE=0,kE=0;
@@ -276,34 +279,59 @@ export default function App() {
           <input type="date" value={recordDate} onChange={e=>setRecordDate(e.target.value)} style={{background:C.card,border:`1px solid ${C.border}`,color:C.accent,padding:"8px 12px",fontSize:12,fontFamily:"monospace",borderRadius:3}}/>
         </div>
 
-        {/* FLOOR PALLETS INPUT */}
-        <div>
-          <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.floor,marginBottom:3}}>PALLETS ON FLOOR</div>
-          <input type="text" placeholder="e.g. 125" value={floorInput}
-            onChange={e=>setFloorInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter")apply();}}
-            style={{background:C.card,border:`1px solid ${C.floor}44`,color:C.floor,padding:"8px 14px",fontSize:14,fontFamily:"monospace",borderRadius:3,width:120,fontWeight:700,outline:"none"}} />
-        </div>
-
         <Btn c={C.accent} onClick={()=>{apply();notify("Preview updated","info")}}>PREVIEW</Btn>
         <Btn c={C.green} filled onClick={()=>setShowConfirm(true)} disabled={saving}>{saving?"SAVING...":"SAVE WEEK"}</Btn>
         <Btn c={C.red} onClick={()=>{
-          const o={};SHELVES.forEach(s=>{o[s.id]=""});setInputs(o);setFloorInput("");setFloorPallets(0);
+          const o={};SHELVES.forEach(s=>{o[s.id]=""});setInputs(o);
+          setFloorAccounts([{name:"",value:""}]);
           setData(SHELVES.map(s=>({...s,fE:0,bE:0,kE:0,occ:s.cap,free:0,util:100})));
           notify("Reset to full","info");
         }}>CLEAR</Btn>
       </div>
 
-      {/* Floor pallets callout */}
-      {floorPallets > 0 && (
-        <div style={{background:C.floorDim,border:`1px solid ${C.floor}33`,borderRadius:4,padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:16}}>
-          <div style={{fontSize:32,fontWeight:900,color:C.floor,fontFamily:"monospace",lineHeight:1}}>{floorPallets}</div>
-          <div>
-            <div style={{fontSize:12,fontWeight:700,color:C.floor}}>PALLETS ON FLOOR</div>
-            <div style={{fontSize:10,color:C.mid}}>These pallets are not on shelves — {A.floorPct}% of total inventory is on the floor</div>
-          </div>
+      {/* Floor pallets by account */}
+      <div style={{...card,marginBottom:16,padding:"14px 18px"}}>
+        <div style={{...lbl,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <span>FLOOR PALLETS BY ACCOUNT</span>
+          <button onClick={()=>setFloorAccounts(p=>[...p,{name:"",value:""}])}
+            style={{background:C.accentDim,border:`1px solid ${C.accent}44`,color:C.accent,padding:"4px 12px",fontSize:9,fontWeight:700,letterSpacing:1,cursor:"pointer",fontFamily:"monospace",borderRadius:3}}>+ ADD ACCOUNT</button>
         </div>
-      )}
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {floorAccounts.map((a,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:4,height:34,borderRadius:2,background:ACCT_COLORS[i%ACCT_COLORS.length],flexShrink:0}}/>
+              <input type="text" placeholder="Account name" value={a.name}
+                onChange={e=>{const v=e.target.value;setFloorAccounts(p=>p.map((x,j)=>j===i?{...x,name:v}:x));}}
+                style={{background:C.bg,border:`1px solid ${C.border}`,color:C.text,padding:"7px 10px",fontSize:11,fontWeight:600,fontFamily:"monospace",borderRadius:3,width:180,outline:"none"}}/>
+              <input type="number" min="0" placeholder="Pallets" value={a.value}
+                onChange={e=>{const v=e.target.value;setFloorAccounts(p=>p.map((x,j)=>j===i?{...x,value:v}:x));}}
+                onKeyDown={e=>{if(e.key==="Enter")apply();}}
+                style={{background:C.bg,border:`1px solid ${C.border}`,color:ACCT_COLORS[i%ACCT_COLORS.length],padding:"7px 10px",fontSize:13,fontWeight:700,fontFamily:"monospace",borderRadius:3,width:100,outline:"none"}}/>
+              {floorAccounts.length>1&&(
+                <button onClick={()=>setFloorAccounts(p=>p.filter((_,j)=>j!==i))}
+                  style={{background:C.redDim,border:`1px solid ${C.red}33`,color:C.red,width:28,height:28,fontSize:14,fontWeight:700,cursor:"pointer",borderRadius:3,display:"flex",alignItems:"center",justifyContent:"center",padding:0,lineHeight:1}}>×</button>
+              )}
+            </div>
+          ))}
+        </div>
+        {floorPallets > 0 && (
+          <div style={{marginTop:12,padding:"10px 14px",background:C.floorDim,border:`1px solid ${C.floor}33`,borderRadius:4,display:"flex",alignItems:"center",gap:16,flexWrap:"wrap"}}>
+            <div style={{fontSize:28,fontWeight:900,color:C.floor,fontFamily:"monospace",lineHeight:1}}>{floorPallets}</div>
+            <div>
+              <div style={{fontSize:11,fontWeight:700,color:C.floor}}>TOTAL PALLETS ON FLOOR</div>
+              <div style={{fontSize:9,color:C.mid}}>{A.floorPct}% of total inventory · {floorAccounts.filter(a=>parseInt(a.value)>0).length} active accounts</div>
+            </div>
+            <div style={{marginLeft:"auto",display:"flex",gap:8,flexWrap:"wrap"}}>
+              {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
+                const origIdx=floorAccounts.indexOf(a);
+                return(<div key={i} style={{fontSize:9,fontFamily:"monospace",color:ACCT_COLORS[origIdx%ACCT_COLORS.length],background:`${ACCT_COLORS[origIdx%ACCT_COLORS.length]}15`,border:`1px solid ${ACCT_COLORS[origIdx%ACCT_COLORS.length]}33`,padding:"3px 8px",borderRadius:3}}>
+                  {a.name||`Account ${origIdx+1}`}: <b>{a.value}</b>
+                </div>);
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div style={lbl}>SHELF EMPTIES · FORMAT: FRONT-BRIDGE-BACK (e.g. 46-3-25) · ALL RACKS START FULL</div>
 
@@ -486,6 +514,37 @@ export default function App() {
           )}
         </div>
 
+        {/* Row 2b: Floor Pallets by Account */}
+        {floorPallets>0&&(
+          <div style={{...card,marginBottom:12}}>
+            <div style={lbl}>PALLETS ON FLOOR BY ACCOUNT</div>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={floorAccounts.filter(a=>parseInt(a.value)>0).map((a)=>({name:a.name||`Account ${floorAccounts.indexOf(a)+1}`,Pallets:parseInt(a.value)||0,fill:ACCT_COLORS[floorAccounts.indexOf(a)%ACCT_COLORS.length]}))} barGap={8}>
+                <CartesianGrid strokeDasharray="3 3" stroke={C.grid}/>
+                <XAxis dataKey="name" tick={{fill:C.dim,fontSize:9}} axisLine={false}/>
+                <YAxis tick={{fill:C.dim,fontSize:8}} axisLine={false}/>
+                <Tooltip content={<CTip/>}/>
+                <Bar dataKey="Pallets" radius={[4,4,0,0]}>
+                  {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
+                    const origIdx=floorAccounts.indexOf(a);
+                    return <Cell key={i} fill={ACCT_COLORS[origIdx%ACCT_COLORS.length]}/>;
+                  })}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <div style={{display:"flex",justifyContent:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
+              {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
+                const origIdx=floorAccounts.indexOf(a);
+                const pct=floorPallets?((parseInt(a.value)/floorPallets)*100).toFixed(1):0;
+                return(<div key={i} style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.mid}}>
+                  <div style={{width:8,height:8,borderRadius:2,background:ACCT_COLORS[origIdx%ACCT_COLORS.length]}}/>
+                  {a.name||`Account ${origIdx+1}`}: <b style={{color:ACCT_COLORS[origIdx%ACCT_COLORS.length]}}>{a.value}</b> <span style={{color:C.dim}}>({pct}%)</span>
+                </div>);
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Row 3: Heatmap + Hot/Cold */}
         <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12,marginBottom:12}}>
           <div style={card}>
@@ -543,11 +602,21 @@ export default function App() {
             })}</tbody>
           </table>
           {floorPallets>0&&(
-            <div style={{borderTop:`1px solid ${C.floor}33`,padding:"10px 8px",display:"flex",alignItems:"center",gap:16,marginTop:4}}>
-              <span style={{fontSize:10,fontWeight:800,color:C.floor,fontFamily:"monospace",letterSpacing:2}}>FLOOR</span>
-              <span style={{fontSize:10,color:C.mid}}>Not on shelf</span>
-              <span style={{fontSize:18,fontWeight:900,color:C.floor,fontFamily:"monospace"}}>{floorPallets} pallets</span>
-              <span style={{fontSize:10,color:C.mid}}>({A.floorPct}% of total inventory)</span>
+            <div style={{borderTop:`1px solid ${C.floor}33`,padding:"10px 8px",marginTop:4}}>
+              <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:6}}>
+                <span style={{fontSize:10,fontWeight:800,color:C.floor,fontFamily:"monospace",letterSpacing:2}}>FLOOR</span>
+                <span style={{fontSize:10,color:C.mid}}>Not on shelf</span>
+                <span style={{fontSize:18,fontWeight:900,color:C.floor,fontFamily:"monospace"}}>{floorPallets} pallets</span>
+                <span style={{fontSize:10,color:C.mid}}>({A.floorPct}% of total inventory)</span>
+              </div>
+              <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
+                  const origIdx=floorAccounts.indexOf(a);
+                  return(<span key={i} style={{fontSize:9,fontFamily:"monospace",color:ACCT_COLORS[origIdx%ACCT_COLORS.length],background:`${ACCT_COLORS[origIdx%ACCT_COLORS.length]}12`,border:`1px solid ${ACCT_COLORS[origIdx%ACCT_COLORS.length]}33`,padding:"3px 8px",borderRadius:3}}>
+                    {a.name||`Account ${origIdx+1}`}: <b>{a.value}</b>
+                  </span>);
+                })}
+              </div>
             </div>
           )}
         </div>
