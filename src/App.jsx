@@ -145,28 +145,7 @@ export default function App() {
     if (rows && rows.length > 0) {
       setSnaps(rows);
     } else {
-      // Demo data with floor pallets
-      const demo=[],now=new Date();
-      for(let i=15;i>=0;i--){
-        const d=new Date(now);d.setDate(d.getDate()-i*7);
-        const j=new Date(d.getFullYear(),0,1);
-        const wn=Math.ceil(((d-j)/864e5+j.getDay()+1)/7);
-        const wk=`${d.getFullYear()}-W${String(wn).padStart(2,"0")}`;
-        const occ=Math.round(TOTAL_CAP*(0.70+Math.random()*0.20));
-        const free=TOTAL_CAP-occ;
-        const fp=Math.round(50+Math.random()*200);
-        demo.push({week_label:wk,total_capacity:TOTAL_CAP,total_occupied:occ,total_free:free,
-          utilization_pct:+((occ/TOTAL_CAP)*100).toFixed(1),
-          sd_occupied:Math.round(occ*0.41),dd_occupied:Math.round(occ*0.59),
-          sd_free:Math.round(free*0.44),dd_free:Math.round(free*0.56),
-          floor_pallets:fp,on_shelf_total:occ,
-          critical_shelves:Math.floor(Math.random()*3),
-          high_shelves:Math.floor(Math.random()*8)+2,
-          optimal_shelves:Math.floor(Math.random()*10)+6,
-          low_shelves:Math.floor(Math.random()*5),
-        });
-      }
-      setSnaps(demo);
+      setSnaps([]);
     }
   }
 
@@ -191,35 +170,33 @@ export default function App() {
     setSession(null);
   }
 
-  async function loadHistoricalReport(date) {
+  async function loadHistoricalReport(weekLabel) {
     const { data: records, error } = await supabase
       .from("weekly_records")
       .select("*")
-      .eq("week_label", `${date} (${new Date(date).toLocaleDateString('en-US', {weekday:'short'})})`)
+      .eq("week_label", weekLabel)
       .order("shelf_id", { ascending: true });
 
     if (records && records.length > 0) {
-      setViewReportDate(date);
+      setViewReportDate(weekLabel);
       setViewReportRecords(records);
-      notify(`Loaded report for ${date}`, "info");
     } else {
-      notify("No records found for this date", "error");
+      notify("No shelf records found for this date", "error");
     }
   }
 
-  async function loadHistoricalAnalytics(date) {
+  async function loadHistoricalAnalytics(weekLabel) {
     const { data: snapshot, error } = await supabase
       .from("weekly_snapshots")
       .select("*")
-      .eq("week_label", `${date} (${new Date(date).toLocaleDateString('en-US', {weekday:'short'})})`)
+      .eq("week_label", weekLabel)
       .single();
 
     if (snapshot) {
-      setViewAnalyticsDate(date);
+      setViewAnalyticsDate(weekLabel);
       setViewAnalyticsSnapshot(snapshot);
-      notify(`Loaded analytics for ${date}`, "info");
     } else {
-      notify("No analytics found for this date", "error");
+      notify("No data found for this record", "error");
     }
   }
 
@@ -525,13 +502,17 @@ export default function App() {
       <div style={{padding:"20px 28px",maxWidth:1600,margin:"0 auto"}}>
         <div style={{display:"flex",gap:12,alignItems:"flex-end",marginBottom:18,flexWrap:"wrap"}}>
           <div>
-            <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:3}}>VIEW HISTORICAL ANALYTICS</div>
-            <select value={viewAnalyticsDate||""} onChange={(e)=>loadHistoricalAnalytics(e.target.value)} style={{background:C.card,border:`1px solid ${C.border}`,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"monospace",borderRadius:3,cursor:"pointer"}}>
-              <option value="">-- Current Date --</option>
-              {snaps.map((snap,i)=><option key={i} value={snap.week_label.split(' ')[0]}>{snap.week_label}</option>)}
-            </select>
+            <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:3}}>VIEW SAVED RECORDS</div>
+            {snaps.length===0?(
+              <div style={{background:C.card,border:`1px solid ${C.border}`,color:C.dim,padding:"8px 14px",fontSize:10,fontFamily:"monospace",borderRadius:3}}>No saved records yet — save a week first</div>
+            ):(
+              <select value={viewAnalyticsDate||""} onChange={e=>e.target.value&&loadHistoricalAnalytics(e.target.value)} style={{background:C.card,border:`1px solid ${C.border}`,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"monospace",borderRadius:3,cursor:"pointer",minWidth:220}}>
+                <option value="">-- Select a saved date --</option>
+                {[...snaps].reverse().map((snap,i)=><option key={i} value={snap.week_label}>{snap.week_label}</option>)}
+              </select>
+            )}
           </div>
-          {viewAnalyticsDate && <Btn c={C.red} onClick={()=>{setViewAnalyticsDate(null);setViewAnalyticsSnapshot(null);notify("Viewing current analytics","info")}}>CLEAR FILTER</Btn>}
+          {viewAnalyticsDate && <Btn c={C.red} onClick={()=>{setViewAnalyticsDate(null);setViewAnalyticsSnapshot(null);}}>← BACK TO CURRENT</Btn>}
         </div>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
@@ -864,19 +845,23 @@ export default function App() {
   //  REPORT HISTORY PAGE
   // ═══════════════════════════════════════════════════
   const renderReportHistory = () => {
-    const reportDates = snaps.map(s => ({label: s.week_label, date: s.week_label.split(' ')[0]})).reverse();
-    const selectedReport = snaps.find(s => s.week_label.split(' ')[0] === viewReportDate);
+    const selectedReport = snaps.find(s => s.week_label === viewReportDate);
 
     return(
       <div style={{padding:"20px 28px",maxWidth:1600,margin:"0 auto"}}>
         <div style={{display:"flex",gap:12,alignItems:"flex-end",marginBottom:20,flexWrap:"wrap"}}>
           <div>
-            <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:3}}>SELECT REPORT DATE</div>
-            <select value={viewReportDate||""} onChange={(e)=>loadHistoricalReport(e.target.value)} style={{background:C.card,border:`1px solid ${C.border}`,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"monospace",borderRadius:3,cursor:"pointer"}}>
-              <option value="">-- Choose a date --</option>
-              {reportDates.map((rd,i)=><option key={i} value={rd.date}>{rd.label}</option>)}
-            </select>
+            <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:3}}>SELECT SAVED RECORD</div>
+            {snaps.length===0?(
+              <div style={{background:C.card,border:`1px solid ${C.border}`,color:C.dim,padding:"8px 14px",fontSize:10,fontFamily:"monospace",borderRadius:3}}>No saved records yet — save a week first</div>
+            ):(
+              <select value={viewReportDate||""} onChange={e=>e.target.value&&loadHistoricalReport(e.target.value)} style={{background:C.card,border:`1px solid ${C.border}`,color:C.text,padding:"8px 12px",fontSize:12,fontFamily:"monospace",borderRadius:3,cursor:"pointer",minWidth:220}}>
+                <option value="">-- Select a saved date --</option>
+                {[...snaps].reverse().map((s,i)=><option key={i} value={s.week_label}>{s.week_label}</option>)}
+              </select>
+            )}
           </div>
+          {viewReportDate && <Btn c={C.red} onClick={()=>{setViewReportDate(null);setViewReportRecords([])}}>← CLEAR</Btn>}
         </div>
 
         {selectedReport && viewReportRecords.length > 0 && (
