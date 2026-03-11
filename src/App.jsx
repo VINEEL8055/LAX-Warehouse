@@ -113,7 +113,27 @@ export default function App() {
   const [viewAnalyticsDate, setViewAnalyticsDate] = useState(null);
   const [viewAnalyticsSnapshot, setViewAnalyticsSnapshot] = useState(null);
 
-  useEffect(()=>{loadSnaps();},[]);
+  // ── Auth state ──
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [authMode, setAuthMode] = useState("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState(null);
+  const [authSubmitting, setAuthSubmitting] = useState(false);
+
+  useEffect(()=>{
+    supabase.auth.getSession().then(({data:{session:s}})=>{
+      setSession(s);
+      setAuthLoading(false);
+    });
+    const {data:{subscription}} = supabase.auth.onAuthStateChange((_e,s)=>{
+      setSession(s);
+    });
+    return ()=>subscription.unsubscribe();
+  },[]);
+
+  useEffect(()=>{if(session)loadSnaps();},[session]);
 
   async function loadSnaps() {
     const { data: rows, error } = await supabase
@@ -151,6 +171,25 @@ export default function App() {
   }
 
   const notify=(m,t="success")=>{setNotif({m,t});setTimeout(()=>setNotif(null),3500);};
+
+  // ── Auth handlers ──
+  async function handleSignIn(){
+    setAuthSubmitting(true);setAuthError(null);
+    const{error}=await supabase.auth.signInWithPassword({email:authEmail,password:authPassword});
+    if(error)setAuthError(error.message);
+    setAuthSubmitting(false);
+  }
+  async function handleSignUp(){
+    setAuthSubmitting(true);setAuthError(null);
+    const{error}=await supabase.auth.signUp({email:authEmail,password:authPassword});
+    if(error){setAuthError(error.message);}
+    else{setAuthMode("signin");notify("Account created! You can now sign in.","info");}
+    setAuthSubmitting(false);
+  }
+  async function handleSignOut(){
+    await supabase.auth.signOut();
+    setSession(null);
+  }
 
   async function loadHistoricalReport(date) {
     const { data: records, error } = await supabase
@@ -216,6 +255,7 @@ export default function App() {
       high_shelves:nd.filter(s=>s.util>70&&s.util<=90).length,
       optimal_shelves:nd.filter(s=>s.util>40&&s.util<=70).length,
       low_shelves:nd.filter(s=>s.util<=40).length,
+      floor_accounts:floorAccounts.filter(a=>a.name||a.value),
     };
 
     const { error: snapErr } = await supabase
@@ -266,6 +306,76 @@ export default function App() {
   // ── Styles ──
   const card={background:C.card,border:`1px solid ${C.border}`,borderRadius:4,padding:18};
   const lbl={fontFamily:"monospace",fontSize:9,letterSpacing:3,color:C.dim,textTransform:"uppercase",marginBottom:10,borderBottom:`1px solid ${C.border}`,paddingBottom:7};
+
+  // ═══════════════════════════════════════════════════
+  //  LOGIN PAGE
+  // ═══════════════════════════════════════════════════
+  const renderLogin = () => (
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:20}}>
+      {/* Branding */}
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontSize:32,fontWeight:900,letterSpacing:8,color:C.accent,fontFamily:"monospace",textShadow:`0 0 30px ${C.accentDim}`}}>DISTRILOGIK</div>
+        <div style={{fontSize:9,fontFamily:"monospace",color:C.dim,letterSpacing:4,marginTop:4}}>LAX 3PL · WAREHOUSE MANAGEMENT</div>
+      </div>
+
+      {/* Card */}
+      <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"32px 36px",width:"100%",maxWidth:380,boxShadow:`0 4px 40px rgba(100,149,237,0.08)`}}>
+        {/* Tab toggle */}
+        <div style={{display:"flex",marginBottom:24,borderBottom:`1px solid ${C.border}`,gap:0}}>
+          {[["signin","SIGN IN"],["signup","CREATE ACCOUNT"]].map(([m,l])=>(
+            <button key={m} onClick={()=>{setAuthMode(m);setAuthError(null);}} style={{
+              flex:1,padding:"8px 0",fontSize:9,fontWeight:700,letterSpacing:2,fontFamily:"monospace",
+              background:"transparent",border:"none",borderBottom:`2px solid ${authMode===m?C.accent:"transparent"}`,
+              color:authMode===m?C.accent:C.dim,cursor:"pointer",transition:"all 0.15s",
+            }}>{l}</button>
+          ))}
+        </div>
+
+        {/* Fields */}
+        <div style={{marginBottom:14}}>
+          <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:5}}>EMAIL</div>
+          <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")authMode==="signin"?handleSignIn():handleSignUp();}}
+            placeholder="you@example.com" autoComplete="email"
+            style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,color:C.text,
+              padding:"10px 12px",fontSize:12,fontFamily:"monospace",borderRadius:4,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+        <div style={{marginBottom:22}}>
+          <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:5}}>PASSWORD</div>
+          <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)}
+            onKeyDown={e=>{if(e.key==="Enter")authMode==="signin"?handleSignIn():handleSignUp();}}
+            placeholder="••••••••" autoComplete={authMode==="signin"?"current-password":"new-password"}
+            style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,color:C.text,
+              padding:"10px 12px",fontSize:12,fontFamily:"monospace",borderRadius:4,outline:"none",boxSizing:"border-box"}}/>
+        </div>
+
+        {/* Error */}
+        {authError&&(
+          <div style={{background:C.redDim,border:`1px solid ${C.red}33`,color:C.red,padding:"8px 12px",
+            borderRadius:4,fontSize:10,fontFamily:"monospace",marginBottom:16,lineHeight:1.5}}>
+            {authError}
+          </div>
+        )}
+
+        {/* Submit */}
+        <button onClick={authMode==="signin"?handleSignIn:handleSignUp} disabled={authSubmitting||!authEmail||!authPassword}
+          style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accent}55`,color:C.accent,
+            padding:"11px 0",fontSize:11,fontWeight:700,letterSpacing:3,fontFamily:"monospace",
+            borderRadius:4,cursor:authSubmitting?"not-allowed":"pointer",opacity:(!authEmail||!authPassword)?0.5:1,
+            transition:"all 0.15s"}}>
+          {authSubmitting?"AUTHENTICATING...":(authMode==="signin"?"SIGN IN":"CREATE ACCOUNT")}
+        </button>
+      </div>
+
+      {/* Connected indicator */}
+      <div style={{display:"flex",alignItems:"center",gap:6,marginTop:24}}>
+        <div style={{width:5,height:5,borderRadius:"50%",background:C.green,boxShadow:`0 0 5px ${C.green}`,animation:"pulse 2s infinite"}}/>
+        <span style={{fontSize:7,fontFamily:"monospace",color:C.green,letterSpacing:2}}>SUPABASE CONNECTED</span>
+      </div>
+
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.12}}`}</style>
+    </div>
+  );
 
   // ═══════════════════════════════════════════════════
   //  INPUT PAGE
@@ -842,6 +952,18 @@ export default function App() {
   // ═══════════════════════════════════════════════════
   //  SHELL
   // ═══════════════════════════════════════════════════
+  // ── Loading splash ──
+  if(authLoading) return(
+    <div style={{minHeight:"100vh",background:C.bg,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column",gap:14}}>
+      <div style={{fontSize:28,fontWeight:900,letterSpacing:8,color:C.accent,fontFamily:"monospace"}}>DISTRILOGIK</div>
+      <div style={{fontSize:9,color:C.dim,letterSpacing:4,fontFamily:"monospace"}}>AUTHENTICATING...</div>
+      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.12}}`}</style>
+    </div>
+  );
+
+  // ── Login gate ──
+  if(!session) return renderLogin();
+
   return(
     <div style={{minHeight:"100vh",background:C.bg,color:C.text,fontFamily:"'Segoe UI',system-ui,sans-serif"}}>
       {/* Save Confirmation Modal */}
@@ -885,9 +1007,13 @@ export default function App() {
             }}>{l}</button>
           ))}
         </div>
-        <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{width:5,height:5,borderRadius:"50%",background:C.green,boxShadow:`0 0 5px ${C.green}`,animation:"pulse 2s infinite"}}/>
-          <span style={{fontSize:7,fontFamily:"monospace",color:C.green,letterSpacing:2}}>SUPABASE CONNECTED</span>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <span style={{fontSize:8,fontFamily:"monospace",color:C.dim,letterSpacing:1,maxWidth:160,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{session?.user?.email}</span>
+          <button onClick={handleSignOut} style={{background:C.redDim,border:`1px solid ${C.red}33`,color:C.red,padding:"5px 10px",fontSize:8,fontWeight:700,letterSpacing:2,cursor:"pointer",fontFamily:"monospace",borderRadius:3,transition:"all 0.15s"}}>LOGOUT</button>
+          <div style={{display:"flex",alignItems:"center",gap:5}}>
+            <div style={{width:5,height:5,borderRadius:"50%",background:C.green,boxShadow:`0 0 5px ${C.green}`,animation:"pulse 2s infinite"}}/>
+            <span style={{fontSize:7,fontFamily:"monospace",color:C.green,letterSpacing:2}}>CONNECTED</span>
+          </div>
         </div>
       </div>
 
