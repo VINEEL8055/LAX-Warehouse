@@ -112,6 +112,7 @@ export default function App() {
   const [viewReportRecords, setViewReportRecords] = useState([]);
   const [viewAnalyticsDate, setViewAnalyticsDate] = useState(null);
   const [viewAnalyticsSnapshot, setViewAnalyticsSnapshot] = useState(null);
+  const [viewAnalyticsRecords, setViewAnalyticsRecords] = useState([]);
 
   // ── Auth state ──
   const [session, setSession] = useState(null);
@@ -191,15 +192,15 @@ export default function App() {
   }
 
   async function loadHistoricalAnalytics(weekLabel) {
-    const { data: snapshot, error } = await supabase
-      .from("weekly_snapshots")
-      .select("*")
-      .eq("week_label", weekLabel)
-      .single();
+    const [{ data: snapshot }, { data: records }] = await Promise.all([
+      supabase.from("weekly_snapshots").select("*").eq("week_label", weekLabel).single(),
+      supabase.from("weekly_records").select("*").eq("week_label", weekLabel).order("shelf_id", { ascending: true }),
+    ]);
 
     if (snapshot) {
       setViewAnalyticsDate(weekLabel);
       setViewAnalyticsSnapshot(snapshot);
+      setViewAnalyticsRecords(records || []);
     } else {
       notify("No data found for this record", "error");
     }
@@ -495,7 +496,17 @@ export default function App() {
     }
 
     const{tOcc,tFree,util,sdOcc,ddOcc,sdCap,ddCap,hot,cold,totalWithFloor,floorPct,shelfPct}=displayData;
-    const shelfBar=data.map(s=>({name:s.name,Occupied:s.occ,Free:s.free}));
+
+    // Build per-shelf display array — use historical records when viewing a past week
+    const displayShelves = viewAnalyticsRecords.length > 0
+      ? SHELVES.map(s => {
+          const rec = viewAnalyticsRecords.find(r => r.shelf_id === s.id);
+          if (!rec) return {...s, occ: s.cap, free: 0, fE: 0, bE: 0, kE: 0, util: 100};
+          return {...s, occ: rec.occupied, free: rec.free, fE: rec.front_empties, bE: rec.bridge_empties, kE: rec.back_empties, util: Number(rec.utilization_pct)};
+        })
+      : data;
+
+    const shelfBar=displayShelves.map(s=>({name:s.name,Occupied:s.occ,Free:s.free}));
 
     const floorShelfPie=[
       {name:"On Shelf",value:tOcc,color:C.accent},
@@ -517,7 +528,7 @@ export default function App() {
               </select>
             )}
           </div>
-          {viewAnalyticsDate && <Btn c={C.red} onClick={()=>{setViewAnalyticsDate(null);setViewAnalyticsSnapshot(null);}}>← BACK TO CURRENT</Btn>}
+          {viewAnalyticsDate && <Btn c={C.red} onClick={()=>{setViewAnalyticsDate(null);setViewAnalyticsSnapshot(null);setViewAnalyticsRecords([]);}}>← BACK TO CURRENT</Btn>}
         </div>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
@@ -649,7 +660,7 @@ export default function App() {
         <div style={{...card,marginBottom:12}}>
           <div style={lbl}>UTILIZATION HEATMAP</div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(13,1fr)",gap:3}}>
-            {data.map((s,i)=>{
+            {displayShelves.map((s,i)=>{
               const bg=s.util>90?C.red:s.util>70?C.orange:s.util>40?C.yellow:s.util>10?C.green:C.border;
               return(<div key={i} title={`${s.name}: ${s.util}% (${s.occ}/${s.cap})`}
                 style={{background:bg,opacity:Math.max(0.3,s.util/100),padding:"10px 3px",textAlign:"center",borderRadius:2}}>
@@ -674,7 +685,7 @@ export default function App() {
               {["Shelf","Type","Cap","Occupied","Free","F-Empty","B-Empty","K-Empty","Util%","Status"].map(h=>
                 <th key={h} style={{padding:"6px 8px",textAlign:"left",color:C.dim,fontSize:8,letterSpacing:2,fontWeight:400}}>{h}</th>)}
             </tr></thead>
-            <tbody>{data.map((s,i)=>{
+            <tbody>{displayShelves.map((s,i)=>{
               const sc=s.util>90?C.red:s.util>70?C.orange:s.util>40?C.yellow:C.green;
               const sl=s.util>90?"CRITICAL":s.util>70?"HIGH":s.util>40?"OPTIMAL":s.util>10?"LOW":"EMPTY";
               return(<tr key={i} style={{borderBottom:`1px solid ${C.border}08`}}>
