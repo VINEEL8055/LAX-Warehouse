@@ -611,35 +611,39 @@ export default function App() {
         </div>
 
         {/* Row 2b: Floor Pallets by Account */}
-        {floorPallets>0&&(
+        {(()=>{
+          const acctSource = viewAnalyticsSnapshot?.floor_accounts?.length > 0
+            ? viewAnalyticsSnapshot.floor_accounts
+            : floorAccounts;
+          const activeAccts = acctSource.filter(a=>parseInt(a.value)>0);
+          const acctTotal = activeAccts.reduce((s,a)=>s+(parseInt(a.value)||0),0);
+          if(!acctTotal) return null;
+          return(
           <div style={{...card,marginBottom:12}}>
             <div style={lbl}>PALLETS ON FLOOR BY ACCOUNT</div>
             <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={floorAccounts.filter(a=>parseInt(a.value)>0).map((a)=>({name:a.name||`Account ${floorAccounts.indexOf(a)+1}`,Pallets:parseInt(a.value)||0,fill:ACCT_COLORS[floorAccounts.indexOf(a)%ACCT_COLORS.length]}))} barGap={8}>
+              <BarChart data={activeAccts.map((a,i)=>({name:a.name||`Account ${i+1}`,Pallets:parseInt(a.value)||0,fill:ACCT_COLORS[i%ACCT_COLORS.length]}))} barGap={8}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.grid}/>
                 <XAxis dataKey="name" tick={{fill:C.dim,fontSize:9}} axisLine={false}/>
                 <YAxis tick={{fill:C.dim,fontSize:8}} axisLine={false}/>
                 <Tooltip content={<CTip/>}/>
                 <Bar dataKey="Pallets" radius={[4,4,0,0]}>
-                  {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
-                    const origIdx=floorAccounts.indexOf(a);
-                    return <Cell key={i} fill={ACCT_COLORS[origIdx%ACCT_COLORS.length]}/>;
-                  })}
+                  {activeAccts.map((_,i)=><Cell key={i} fill={ACCT_COLORS[i%ACCT_COLORS.length]}/>)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
             <div style={{display:"flex",justifyContent:"center",gap:14,marginTop:6,flexWrap:"wrap"}}>
-              {floorAccounts.filter(a=>parseInt(a.value)>0).map((a,i)=>{
-                const origIdx=floorAccounts.indexOf(a);
-                const pct=floorPallets?((parseInt(a.value)/floorPallets)*100).toFixed(1):0;
+              {activeAccts.map((a,i)=>{
+                const pct=acctTotal?((parseInt(a.value)/acctTotal)*100).toFixed(1):0;
                 return(<div key={i} style={{display:"flex",alignItems:"center",gap:5,fontSize:9,color:C.mid}}>
-                  <div style={{width:8,height:8,borderRadius:2,background:ACCT_COLORS[origIdx%ACCT_COLORS.length]}}/>
-                  {a.name||`Account ${origIdx+1}`}: <b style={{color:ACCT_COLORS[origIdx%ACCT_COLORS.length]}}>{a.value}</b> <span style={{color:C.dim}}>({pct}%)</span>
+                  <div style={{width:8,height:8,borderRadius:2,background:ACCT_COLORS[i%ACCT_COLORS.length]}}/>
+                  {a.name||`Account ${i+1}`}: <b style={{color:ACCT_COLORS[i%ACCT_COLORS.length]}}>{a.value}</b> <span style={{color:C.dim}}>({pct}%)</span>
                 </div>);
               })}
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Row 3: Heatmap */}
         <div style={{...card,marginBottom:12}}>
