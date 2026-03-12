@@ -144,6 +144,11 @@ export default function App() {
 
     if (rows && rows.length > 0) {
       setSnaps(rows);
+      // Restore floor accounts from the most recent snapshot
+      const latest = rows[rows.length - 1];
+      if (latest.floor_accounts && Array.isArray(latest.floor_accounts) && latest.floor_accounts.length > 0) {
+        setFloorAccounts(latest.floor_accounts);
+      }
     } else {
       setSnaps([]);
     }
