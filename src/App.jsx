@@ -280,6 +280,16 @@ export default function App() {
     return{tOcc,tFree,util:+util,sd,dd,sdOcc,ddOcc,sdCap,ddCap,hot,cold,totalWithFloor,floorPct:+floorPct,shelfPct:+shelfPct};
   },[data,floorPallets]);
 
+  // Per-shelf data for Analytics + 3D — switches to historical when a week is selected
+  const displayShelves = viewAnalyticsRecords.length > 0
+    ? SHELVES.map(s => {
+        const rec = viewAnalyticsRecords.find(r => r.shelf_id === s.id);
+        if (!rec) return {...s, occ: s.cap, free: 0, fE: 0, bE: 0, kE: 0, util: 100};
+        return {...s, occ: rec.occupied, free: rec.free, fE: rec.front_empties, bE: rec.bridge_empties, kE: rec.back_empties, util: Number(rec.utilization_pct)};
+      })
+    : data;
+  const display3DFloorPallets = viewAnalyticsSnapshot ? (viewAnalyticsSnapshot.floor_pallets || 0) : floorPallets;
+
   const wowDelta = useMemo(()=>{
     if(snaps.length<2)return null;
     const l=snaps[snaps.length-1],p=snaps[snaps.length-2];
@@ -496,15 +506,6 @@ export default function App() {
     }
 
     const{tOcc,tFree,util,sdOcc,ddOcc,sdCap,ddCap,hot,cold,totalWithFloor,floorPct,shelfPct}=displayData;
-
-    // Build per-shelf display array — use historical records when viewing a past week
-    const displayShelves = viewAnalyticsRecords.length > 0
-      ? SHELVES.map(s => {
-          const rec = viewAnalyticsRecords.find(r => r.shelf_id === s.id);
-          if (!rec) return {...s, occ: s.cap, free: 0, fE: 0, bE: 0, kE: 0, util: 100};
-          return {...s, occ: rec.occupied, free: rec.free, fE: rec.front_empties, bE: rec.bridge_empties, kE: rec.back_empties, util: Number(rec.utilization_pct)};
-        })
-      : data;
 
     const shelfBar=displayShelves.map(s=>({name:s.name,Occupied:s.occ,Free:s.free}));
 
@@ -940,7 +941,7 @@ export default function App() {
   //  3D MAP PAGE
   // ═══════════════════════════════════════════════════
   const render3D = () => (
-    <Warehouse3D data={data} floorPallets={floorPallets} />
+    <Warehouse3D data={displayShelves} floorPallets={display3DFloorPallets} />
   );
 
 
