@@ -49,8 +49,8 @@ const TOTAL_CAP = SHELVES.reduce((a,s)=>a+s.cap,0);
 // ═══════════════════════════════════════════════════
 //  SUPABASE
 // ═══════════════════════════════════════════════════
-const SB_URL = import.meta.env.VITE_SUPABASE_URL || "https://phrzbqzrlrykcpycajhp.supabase.co";
-const SB_KEY = import.meta.env.VITE_SUPABASE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBocnpicXpybHJ5a2NweWNhamhwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5Mzc5ODAsImV4cCI6MjA4ODUxMzk4MH0.GbWBCOeU6jX2dDAMWtAIpFgErvGUOoJpXxRBJsKWY6w";
+const SB_URL = import.meta.env.VITE_SUPABASE_URL;
+const SB_KEY = import.meta.env.VITE_SUPABASE_KEY;
 const supabase = createClient(SB_URL, SB_KEY);
 
 // ═══════════════════════════════════════════════════
@@ -117,7 +117,6 @@ export default function App() {
   // ── Auth state ──
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
-  const [authMode, setAuthMode] = useState("signin");
   const [authEmail, setAuthEmail] = useState("");
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState(null);
@@ -164,14 +163,7 @@ export default function App() {
     if(error)setAuthError(error.message);
     setAuthSubmitting(false);
   }
-  async function handleSignUp(){
-    setAuthSubmitting(true);setAuthError(null);
-    const{error}=await supabase.auth.signUp({email:authEmail,password:authPassword});
-    if(error){setAuthError(error.message);}
-    else{setAuthMode("signin");notify("Account created! You can now sign in.","info");}
-    setAuthSubmitting(false);
-  }
-  async function handleSignOut(){
+async function handleSignOut(){
     await supabase.auth.signOut();
     setSession(null);
   }
@@ -221,16 +213,56 @@ export default function App() {
   async function saveWeek() {
     setSaving(true);
     setShowConfirm(false);
+
+    // ── Client-side rate limit (30s cooldown) ──
+    const now = Date.now();
+    const lastSave = parseInt(sessionStorage.getItem("lastSaveTs") || "0");
+    const elapsed = Math.ceil((30000 - (now - lastSave)) / 1000);
+    if (now - lastSave < 30000) {
+      notify(`Please wait ${elapsed}s before saving again`, "error");
+      setSaving(false);
+      return;
+    }
+
+    // ── Server-side rate limit ──
+    const { error: rateErr } = await supabase.rpc("enforce_save_rate_limit");
+    if (rateErr) {
+      notify("Please wait 30 seconds between saves", "error");
+      setSaving(false);
+      return;
+    }
+
     const{nd,fp}=apply();
+
+    // ── Server-side input validation ──
     const tOcc=nd.reduce((a,s)=>a+s.occ,0),tFree=nd.reduce((a,s)=>a+s.free,0);
+    if (tOcc < 0 || tFree < 0 || fp < 0) {
+      notify("Invalid data: negative values detected", "error");
+      setSaving(false);
+      return;
+    }
+    if (tOcc + tFree > TOTAL_CAP * 1.1) {
+      notify("Invalid data: occupied + free exceeds capacity", "error");
+      setSaving(false);
+      return;
+    }
+
     const util=+((tOcc/TOTAL_CAP)*100).toFixed(1);
+    if (util < 0 || util > 100) {
+      notify("Invalid data: utilization out of range", "error");
+      setSaving(false);
+      return;
+    }
+
     const sdD=nd.filter(s=>s.type==="SD"),ddD=nd.filter(s=>s.type==="DD");
 
     // Use the record date for the week label
     const week_label = `${recordDate} (${new Date(recordDate).toLocaleDateString('en-US', {weekday:'short'})})`;
 
+    const user_id = session.user.id;
+
     const snap={
-      week_label,total_capacity:TOTAL_CAP,total_occupied:tOcc,total_free:tFree,utilization_pct:util,
+      week_label,user_id,total_capacity:TOTAL_CAP,total_occupied:tOcc,total_free:tFree,utilization_pct:util,
       sd_occupied:sdD.reduce((a,s)=>a+s.occ,0),dd_occupied:ddD.reduce((a,s)=>a+s.occ,0),
       sd_free:sdD.reduce((a,s)=>a+s.free,0),dd_free:ddD.reduce((a,s)=>a+s.free,0),
       floor_pallets:fp,on_shelf_total:tOcc,
@@ -243,21 +275,32 @@ export default function App() {
 
     const { error: snapErr } = await supabase
       .from("weekly_snapshots")
-      .upsert(snap, { onConflict: "week_label" });
+      .upsert(snap, { onConflict: "week_label,user_id" });
 
     if (snapErr) {
-      console.error("Snapshot save error:", snapErr);
-      notify("Error saving to Supabase", "error");
+      console.error("Snapshot save error:", snapErr.message);
+      notify("Error saving snapshot: " + snapErr.message, "error");
+      setSaving(false);
+      return;
     }
 
     const recs = nd.filter(s=>inputs[s.id]?.trim()).map(s=>({
-      week_label, shelf_id:s.id, front_empties:s.fE,
+      week_label, user_id, shelf_id:s.id, front_empties:s.fE,
       bridge_empties:s.bE, back_empties:s.kE,
       occupied:s.occ, free:s.free, utilization_pct:s.util
     }));
     if (recs.length) {
-      await supabase.from("weekly_records").insert(recs);
+      const { error: recErr } = await supabase.from("weekly_records").insert(recs);
+      if (recErr) {
+        console.error("Records save error:", recErr.message);
+        notify("Error saving shelf records: " + recErr.message, "error");
+        setSaving(false);
+        return;
+      }
     }
+
+    // ── Mark save time ──
+    sessionStorage.setItem("lastSaveTs", String(Date.now()));
 
     await loadSnaps();
     setLog(p=>[{t:new Date().toLocaleTimeString(),w:week_label,occ:tOcc,free:tFree,u:util,fp},...p]);
@@ -313,22 +356,11 @@ export default function App() {
 
       {/* Card */}
       <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:8,padding:"32px 36px",width:"100%",maxWidth:380,boxShadow:`0 4px 40px rgba(100,149,237,0.08)`}}>
-        {/* Tab toggle */}
-        <div style={{display:"flex",marginBottom:24,borderBottom:`1px solid ${C.border}`,gap:0}}>
-          {[["signin","SIGN IN"],["signup","CREATE ACCOUNT"]].map(([m,l])=>(
-            <button key={m} onClick={()=>{setAuthMode(m);setAuthError(null);}} style={{
-              flex:1,padding:"8px 0",fontSize:9,fontWeight:700,letterSpacing:2,fontFamily:"monospace",
-              background:"transparent",border:"none",borderBottom:`2px solid ${authMode===m?C.accent:"transparent"}`,
-              color:authMode===m?C.accent:C.dim,cursor:"pointer",transition:"all 0.15s",
-            }}>{l}</button>
-          ))}
-        </div>
-
         {/* Fields */}
         <div style={{marginBottom:14}}>
           <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:5}}>EMAIL</div>
           <input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter")authMode==="signin"?handleSignIn():handleSignUp();}}
+            onKeyDown={e=>{if(e.key==="Enter")handleSignIn();}}
             placeholder="you@example.com" autoComplete="email"
             style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,color:C.text,
               padding:"10px 12px",fontSize:12,fontFamily:"monospace",borderRadius:4,outline:"none",boxSizing:"border-box"}}/>
@@ -336,8 +368,8 @@ export default function App() {
         <div style={{marginBottom:22}}>
           <div style={{fontFamily:"monospace",fontSize:8,letterSpacing:2,color:C.dim,marginBottom:5}}>PASSWORD</div>
           <input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter")authMode==="signin"?handleSignIn():handleSignUp();}}
-            placeholder="••••••••" autoComplete={authMode==="signin"?"current-password":"new-password"}
+            onKeyDown={e=>{if(e.key==="Enter")handleSignIn();}}
+            placeholder="••••••••" autoComplete="current-password"
             style={{width:"100%",background:C.bg,border:`1px solid ${C.border}`,color:C.text,
               padding:"10px 12px",fontSize:12,fontFamily:"monospace",borderRadius:4,outline:"none",boxSizing:"border-box"}}/>
         </div>
@@ -351,12 +383,12 @@ export default function App() {
         )}
 
         {/* Submit */}
-        <button onClick={authMode==="signin"?handleSignIn:handleSignUp} disabled={authSubmitting||!authEmail||!authPassword}
+        <button onClick={handleSignIn} disabled={authSubmitting||!authEmail||!authPassword}
           style={{width:"100%",background:C.accentDim,border:`1px solid ${C.accent}55`,color:C.accent,
             padding:"11px 0",fontSize:11,fontWeight:700,letterSpacing:3,fontFamily:"monospace",
             borderRadius:4,cursor:authSubmitting?"not-allowed":"pointer",opacity:(!authEmail||!authPassword)?0.5:1,
             transition:"all 0.15s"}}>
-          {authSubmitting?"AUTHENTICATING...":(authMode==="signin"?"SIGN IN":"CREATE ACCOUNT")}
+          {authSubmitting?"AUTHENTICATING...":"SIGN IN"}
         </button>
       </div>
 
@@ -540,7 +572,7 @@ export default function App() {
             <KPI l="Shelf Free" v={tFree.toLocaleString()} c={C.green} s={`${(100-util).toFixed(1)}% available`}/>
             <KPI l="On Floor" v={floorPallets.toLocaleString()} c={C.floor} s={`${floorPct}% of all pallets`} d={wowDelta?`${wowDelta.floor>0?"+":""}${wowDelta.floor} WoW`:null}/>
             <KPI l="Total Pallets" v={totalWithFloor.toLocaleString()} c={C.purple} s="Shelf + Floor combined"/>
-            <KPI l="Utilization" v={`${util}%`} c={util>85?C.red:util>60?C.yellow:C.green} s={util>85?"Near capacity":"Healthy"}/>
+            <KPI l="Utilization (On Shelf)" v={`${util}%`} c={util>85?C.red:util>60?C.yellow:C.green} s={util>85?"Near capacity":"Healthy"}/>
           </div>
         </div>
 

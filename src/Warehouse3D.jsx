@@ -15,6 +15,7 @@ export default function Warehouse3D({ data, floorPallets }) {
 
   useEffect(() => {
     const handler = (e) => {
+      if (e.origin !== window.location.origin) return;
       if (e.data === "warehouse3d-ready") setReady(true);
     };
     window.addEventListener("message", handler);
@@ -43,7 +44,7 @@ export default function Warehouse3D({ data, floorPallets }) {
           })),
           floorPallets,
         },
-        "*"
+        window.location.origin
       );
     }
   }, [data, floorPallets, ready]);
@@ -53,6 +54,7 @@ export default function Warehouse3D({ data, floorPallets }) {
       <iframe
         ref={iframeRef}
         src="/warehouse-3d.html"
+        sandbox="allow-scripts allow-same-origin"
         style={{
           width: "100%",
           height: "100%",
