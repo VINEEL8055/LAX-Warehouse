@@ -1023,8 +1023,8 @@ async function handleSignOut(){
 
       {/* Header */}
       <div style={{background:C.card,borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",padding:"0 20px",height:52}}>
-        <div>
-          <div style={{fontSize:17,fontWeight:900,letterSpacing:5,color:C.accent,textShadow:`0 0 14px ${C.accentDim}`,fontFamily:"monospace"}}>DISTRILOGIK</div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <img src="/distrilogik-logo.png" alt="Distrilogik" style={{height:32,objectFit:"contain"}}/>
           <div style={{fontSize:7,fontFamily:"monospace",color:C.dim,letterSpacing:3}}>LAX 3PL · WAREHOUSE + FLOOR TRACKING</div>
         </div>
         <div style={{display:"flex",gap:2}}>
