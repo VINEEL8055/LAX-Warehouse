@@ -257,7 +257,8 @@ async function handleSignOut(){
     const sdD=nd.filter(s=>s.type==="SD"),ddD=nd.filter(s=>s.type==="DD");
 
     // Use the record date for the week label
-    const week_label = `${recordDate} (${new Date(recordDate).toLocaleDateString('en-US', {weekday:'short'})})`;
+    const [ry,rm,rd] = recordDate.split('-').map(Number);
+    const week_label = `${recordDate} (${new Date(ry,rm-1,rd).toLocaleDateString('en-US', {weekday:'short'})})`;
 
     const user_id = session.user.id;
 
